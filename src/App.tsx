@@ -17,7 +17,7 @@ function App() {
   }, [initialize]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/preproute-test-manage">
       <Toaster
         position="top-right"
         toastOptions={{
