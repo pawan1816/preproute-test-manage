@@ -30,3 +30,9 @@ node_modules/
 # Backup and temporary files
 *.backup
 tmp/
+
+# Development and documentation directories
+.drytis/
+.sixth/
+userDocs/
+.claude/
