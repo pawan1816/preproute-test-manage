@@ -53,27 +53,33 @@ export default function Login() {
 
       {/* Right Panel - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-white">
-        <div style={{ width: '280px', textAlign: 'center' }}>
-          {/* Logo */}
-          <div className="flex items-center justify-center gap-[8px]">
+        <div style={{ width: '290px', textAlign: 'center' }}>
+          {/* Logo with Text */}
+          <div className="flex items-center justify-center gap-2">
             <img
               src="/preproute-logo.png"
-              alt="Preproute"
-              className="w-[28px] h-[28px]"
+              alt="PrepRoute"
+              style={{ width: '32px', height: 'auto' }}
               draggable={false}
             />
-            <span style={{ fontSize: '18px', fontWeight: 700, color: '#007AFF', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em' }}>
-              Preproute
+            <span style={{
+              fontSize: '24px',
+              fontWeight: 700,
+              color: '#1E3A8A',
+              fontFamily: 'Inter, sans-serif',
+              letterSpacing: '-0.5px'
+            }}>
+              PrepRoute
             </span>
           </div>
 
           {/* Login Heading */}
-          <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#333333', marginTop: '24px', fontFamily: 'Inter, sans-serif', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1a1a1a', marginTop: '32px', fontFamily: 'Inter, sans-serif', textAlign: 'center' }}>
             Login
           </h2>
 
           {/* Subtitle */}
-          <p style={{ fontSize: '14px', fontWeight: 400, color: '#666666', marginTop: '8px', fontFamily: 'Inter, sans-serif', textAlign: 'center', lineHeight: '1.5' }}>
+          <p style={{ fontSize: '13px', fontWeight: 400, color: '#999999', marginTop: '8px', fontFamily: 'Inter, sans-serif', textAlign: 'center', lineHeight: '1.5' }}>
             Use your company provided Login credentials
           </p>
 
@@ -89,12 +95,12 @@ export default function Login() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ textAlign: 'left', marginTop: '16px' }}>
+          <form onSubmit={handleSubmit} style={{ textAlign: 'left', marginTop: '20px' }}>
             {/* User ID */}
             <div>
               <label
                 htmlFor="userId"
-                style={{ display: 'block', fontSize: '14px', fontWeight: 400, color: '#666666', marginBottom: '6px', fontFamily: 'Inter, sans-serif' }}
+                style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#333333', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}
               >
                 User ID
               </label>
@@ -124,10 +130,10 @@ export default function Login() {
             </div>
 
             {/* Password */}
-            <div style={{ marginTop: '16px' }}>
+            <div style={{ marginTop: '18px' }}>
               <label
                 htmlFor="password"
-                style={{ display: 'block', fontSize: '14px', fontWeight: 400, color: '#666666', marginBottom: '6px', fontFamily: 'Inter, sans-serif' }}
+                style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#333333', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}
               >
                 Password
               </label>
@@ -157,8 +163,8 @@ export default function Login() {
             </div>
 
             {/* Forgot Password */}
-            <div style={{ marginTop: '8px' }}>
-              <a href="#" style={{ fontSize: '12px', color: '#007AFF', textDecoration: 'none', fontFamily: 'Inter, sans-serif' }}>
+            <div style={{ marginTop: '10px' }}>
+              <a href="#" style={{ fontSize: '13px', color: '#007AFF', textDecoration: 'none', fontFamily: 'Inter, sans-serif' }}>
                 Forgot password?
               </a>
             </div>
@@ -178,7 +184,7 @@ export default function Login() {
                 borderRadius: '4px',
                 cursor: isLoading || !userId.trim() || !password.trim() ? 'not-allowed' : 'pointer',
                 opacity: isLoading || !userId.trim() || !password.trim() ? 0.5 : 1,
-                marginTop: '16px',
+                marginTop: '18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

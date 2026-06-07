@@ -26,3 +26,7 @@ dist-ssr
 node_modules/
 .env
 .playwright-mcp/
+
+# Backup and temporary files
+*.backup
+tmp/

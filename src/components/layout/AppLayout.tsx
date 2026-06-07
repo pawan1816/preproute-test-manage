@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { useAuthStore } from '../../store';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, BookOpen, LogOut, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, FileText, BookOpen, LogOut, ChevronDown, Bell } from 'lucide-react';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -31,22 +31,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-screen bg-[#F5F7FA]">
       {/* Sidebar */}
-      <aside className="w-[220px] bg-[#2D2D2D] text-white flex flex-col flex-shrink-0">
+      <aside className="w-[220px] bg-white border-r border-[#E5E7EB] flex flex-col flex-shrink-0">
         {/* Logo */}
-        <div className="px-5 py-4 flex items-center gap-2.5">
+        <div className="px-5 py-4 flex items-center gap-2.5 border-b border-[#E5E7EB]">
           <img
             src="/preproute-logo.png"
             alt="Preproute"
             className="w-6 h-6"
             draggable={false}
           />
-          <span style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: '16px', fontWeight: 700, color: '#1A1A1A', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>
             PrepRoute
           </span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-2 px-3 space-y-0.5">
+        <nav className="flex-1 py-4 px-3 space-y-1">
           {navItems.map((item, idx) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -54,10 +54,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <button
                 key={idx}
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[14px] font-medium transition-all ${
                   active
-                    ? 'bg-[#5B7CFF] text-white'
-                    : 'text-[#A0A0A0] hover:bg-[#3A3A3A] hover:text-white'
+                    ? 'bg-[#5B7CFF] text-white shadow-sm'
+                    : 'text-[#666666] hover:bg-[#F5F7FA] hover:text-[#333333]'
                 }`}
               >
                 <Icon className="w-[18px] h-[18px]" />
@@ -68,12 +68,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </nav>
 
         {/* User section at bottom */}
-        <div className="px-3 py-3 border-t border-[#3A3A3A]">
+        <div className="px-3 py-3 border-t border-[#E5E7EB]">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#A0A0A0] hover:text-white hover:bg-[#3A3A3A] rounded-lg transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[#666666] hover:text-[#333333] hover:bg-[#F5F7FA] rounded-lg transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
             Logout
           </button>
         </div>
@@ -82,34 +82,36 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Right area: Top header + Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header Bar */}
-        <header className="h-[52px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-6 flex-shrink-0">
-          {/* Left: Logo */}
+        <header className="h-[60px] bg-white border-b border-[#E5E7EB] flex items-center justify-between px-6 flex-shrink-0 shadow-sm">
+          {/* Left: Empty or breadcrumb space */}
           <div className="flex items-center gap-2">
-            <img
-              src="/preproute-logo.png"
-              alt="Preproute"
-              className="w-5 h-5"
-              draggable={false}
-            />
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#5B7CFF', fontFamily: 'Inter, sans-serif' }}>
-              PrepRoute
-            </span>
+            {/* This space can be used for breadcrumbs or left empty */}
           </div>
 
-          {/* Right: User info */}
-          <div className="flex items-center gap-2 cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-[#5B7CFF] flex items-center justify-center text-white font-semibold text-xs">
-              {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+          {/* Right: Notification + User info */}
+          <div className="flex items-center gap-4">
+            {/* Notification Bell */}
+            <button className="relative p-2 hover:bg-[#F9FAFB] rounded-lg transition-colors">
+              <Bell className="w-5 h-5 text-[#666666]" />
+              {/* Optional: notification badge dot */}
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+
+            {/* User info */}
+            <div className="flex items-center gap-3 cursor-pointer hover:bg-[#F9FAFB] px-3 py-2 rounded-lg transition-colors">
+              <div className="w-9 h-9 rounded-full bg-[#FFA726] flex items-center justify-center text-white font-semibold text-sm">
+                {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+              </div>
+              <div className="text-left">
+                <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A1A', fontFamily: 'Inter, sans-serif', lineHeight: 1.3 }}>
+                  {user?.name || 'Alex Wando'}
+                </p>
+                <p style={{ fontSize: '12px', fontWeight: 400, color: '#666666', fontFamily: 'Inter, sans-serif', lineHeight: 1.3 }}>
+                  Admin
+                </p>
+              </div>
+              <ChevronDown className="w-4 h-4 text-[#666666]" />
             </div>
-            <div className="text-right">
-              <p style={{ fontSize: '13px', fontWeight: 600, color: '#333', fontFamily: 'Inter, sans-serif', lineHeight: 1.2 }}>
-                {user?.name || 'Alex Wando'}
-              </p>
-              <p style={{ fontSize: '11px', fontWeight: 400, color: '#888', fontFamily: 'Inter, sans-serif', lineHeight: 1.2 }}>
-                Admin
-              </p>
-            </div>
-            <ChevronDown className="w-4 h-4 text-[#888]" />
           </div>
         </header>
 

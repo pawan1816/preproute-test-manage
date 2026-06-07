@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getSubjects, getTopicsBySubject, getSubTopicsByMultiTopics, createTest, updateTest, getTestById } from '../../api/endpoints';
@@ -13,8 +13,8 @@ const testSchema = z.object({
   name: z.string().min(1, 'Test name is required'),
   type: z.enum(['chapterwise', 'pyq', 'mock']),
   subject: z.string().min(1, 'Subject is required'),
-  topics: z.array(z.string()).min(1, 'At least one topic is required'),
-  sub_topics: z.array(z.string()),
+  topics: z.string().min(1, 'Topic is required'),
+  sub_topics: z.string().optional(),
   correct_marks: z.number().min(0),
   wrong_marks: z.number(),
   unattempt_marks: z.number().min(0),
@@ -37,14 +37,14 @@ export default function CreateTest() {
   const [, setIsLoadingData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<TestFormValues>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TestFormValues>({
     resolver: zodResolver(testSchema),
     defaultValues: {
       name: '',
       type: 'chapterwise',
       subject: '',
-      topics: [],
-      sub_topics: [],
+      topics: '',
+      sub_topics: '',
       correct_marks: 5,
       wrong_marks: -1,
       unattempt_marks: 0,
@@ -71,14 +71,14 @@ export default function CreateTest() {
   useEffect(() => {
     if (watchedSubject) {
       loadTopics(watchedSubject);
-      setValue('topics', []);
-      setValue('sub_topics', []);
+      setValue('topics', '');
+      setValue('sub_topics', '');
       setSubTopics([]);
     }
   }, [watchedSubject]);
 
   useEffect(() => {
-    if (watchedTopics.length > 0) {
+    if (watchedTopics) {
       loadSubTopics(watchedTopics);
     } else {
       setSubTopics([]);
@@ -99,10 +99,10 @@ export default function CreateTest() {
     } catch { toast.error('Failed to load topics'); }
   };
 
-  const loadSubTopics = async (topicIds: string[]) => {
+  const loadSubTopics = async (topicId: string) => {
     try {
-      if (topicIds.length > 0) {
-        const data = await getSubTopicsByMultiTopics(topicIds);
+      if (topicId) {
+        const data = await getSubTopicsByMultiTopics([topicId]);
         setSubTopics(data);
       }
     } catch { toast.error('Failed to load sub-topics'); }
@@ -115,6 +115,21 @@ export default function CreateTest() {
       setValue('name', test.name || '');
       setValue('type', (test.type as TestType) || 'chapterwise');
       setValue('subject', test.subject_id || '');
+
+      // Load topics - handle both string array and object array
+      if (test.topics && Array.isArray(test.topics) && test.topics.length > 0) {
+        const firstTopic = test.topics[0];
+        const topicId = typeof firstTopic === 'string' ? firstTopic : (firstTopic as any).id;
+        setValue('topics', topicId || '');
+      }
+
+      // Load sub_topics
+      if (test.sub_topics && Array.isArray(test.sub_topics) && test.sub_topics.length > 0) {
+        const firstSubTopic = test.sub_topics[0];
+        const subTopicId = typeof firstSubTopic === 'string' ? firstSubTopic : (firstSubTopic as any).id;
+        setValue('sub_topics', subTopicId || '');
+      }
+
       setValue('difficulty', (test.difficulty as TestDifficulty) || 'easy');
       setValue('correct_marks', test.correct_marks ?? 5);
       setValue('wrong_marks', test.wrong_marks ?? -1);
@@ -129,7 +144,32 @@ export default function CreateTest() {
   const onSubmit = async (data: TestFormValues, status: 'draft' | null = null) => {
     setIsSaving(true);
     try {
-      const payload = { ...data, ...(status ? { status } : {}) };
+      // Convert single topic/sub_topic to arrays for backend compatibility
+      // Backend doesn't accept empty arrays - only send fields with values
+      const payload: any = {
+        name: data.name,
+        type: data.type,
+        subject: data.subject,
+        correct_marks: data.correct_marks,
+        wrong_marks: data.wrong_marks,
+        unattempt_marks: data.unattempt_marks,
+        difficulty: data.difficulty,
+        total_time: data.total_time,
+        total_marks: data.total_marks,
+        total_questions: data.total_questions,
+        ...(status ? { status } : {})
+      };
+
+      // Only include topics if there's a valid value
+      if (data.topics) {
+        payload.topics = [data.topics];
+      }
+
+      // Only include sub_topics if there's a valid value
+      if (data.sub_topics) {
+        payload.sub_topics = [data.sub_topics];
+      }
+
       if (isEditing && id) {
         await updateTest(id, payload);
         toast.success('Test updated successfully');
@@ -142,8 +182,11 @@ export default function CreateTest() {
         }
       }
       navigate('/dashboard');
-    } catch {
-      toast.error(isEditing ? 'Failed to update test' : 'Failed to create test');
+    } catch (error: any) {
+      console.error('Test save error:', error);
+      console.error('Error response:', error?.response?.data);
+      const errorMessage = error?.response?.data?.message || error?.response?.data?.error || (isEditing ? 'Failed to update test' : 'Failed to create test');
+      toast.error(errorMessage);
     } finally { setIsSaving(false); }
   };
 
@@ -267,70 +310,39 @@ export default function CreateTest() {
                 <label style={labelStyle}>
                   Topic <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <Controller
-                  name="topics"
-                  control={control}
-                  render={({ field }) => (
-                    <select
-                      multiple
-                      value={field.value}
-                      onChange={(e) => {
-                        const values = Array.from(e.target.selectedOptions, (o) => o.value);
-                        field.onChange(values);
-                      }}
-                      disabled={!watchedSubject}
-                      style={{
-                        width: '100%',
-                        minHeight: '80px',
-                        padding: '8px 12px',
-                        border: '1px solid #E0E0E0',
-                        borderRadius: '4px',
-                        fontSize: '14px',
-                        color: '#333333',
-                        outline: 'none',
-                        backgroundColor: watchedSubject ? '#FFFFFF' : '#F9FAFB',
-                        fontFamily: 'Inter, sans-serif',
-                      }}
-                    >
-                      {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                  )}
-                />
+                <select
+                  {...register('topics')}
+                  disabled={!watchedSubject}
+                  style={{
+                    ...inputStyle(!!errors.topics),
+                    cursor: 'pointer',
+                    paddingRight: '32px',
+                    backgroundColor: watchedSubject ? '#FFFFFF' : '#F9FAFB',
+                  }}
+                >
+                  <option value="">Choose from Drop-down</option>
+                  {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                {errors.topics && <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px', fontFamily: 'Inter, sans-serif' }}>{errors.topics.message}</p>}
                 {!watchedSubject && <p style={{ fontSize: '12px', color: '#999999', marginTop: '4px', fontFamily: 'Inter, sans-serif' }}>Select a subject first</p>}
               </div>
 
               {/* Sub Topic */}
               <div>
                 <label style={labelStyle}>Sub Topic</label>
-                <Controller
-                  name="sub_topics"
-                  control={control}
-                  render={({ field }) => (
-                    <select
-                      multiple
-                      value={field.value}
-                      onChange={(e) => {
-                        const values = Array.from(e.target.selectedOptions, (o) => o.value);
-                        field.onChange(values);
-                      }}
-                      disabled={watchedTopics.length === 0}
-                      style={{
-                        width: '100%',
-                        minHeight: '80px',
-                        padding: '8px 12px',
-                        border: '1px solid #E0E0E0',
-                        borderRadius: '4px',
-                        fontSize: '14px',
-                        color: '#333333',
-                        outline: 'none',
-                        backgroundColor: watchedTopics.length > 0 ? '#FFFFFF' : '#F9FAFB',
-                        fontFamily: 'Inter, sans-serif',
-                      }}
-                    >
-                      {subTopics.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
-                    </select>
-                  )}
-                />
+                <select
+                  {...register('sub_topics')}
+                  disabled={!watchedTopics}
+                  style={{
+                    ...inputStyle(),
+                    cursor: 'pointer',
+                    paddingRight: '32px',
+                    backgroundColor: watchedTopics ? '#FFFFFF' : '#F9FAFB',
+                  }}
+                >
+                  <option value="">Choose from Drop-down</option>
+                  {subTopics.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                </select>
               </div>
 
               {/* Duration */}
@@ -377,114 +389,120 @@ export default function CreateTest() {
                 </div>
               </div>
 
-              {/* Marking Scheme */}
+              {/* Marking Scheme - Full Width Bordered Container */}
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: '#333333', marginBottom: '12px', fontFamily: 'Inter, sans-serif' }}>
                   Marking Scheme:
                 </label>
-                <div className="flex items-center gap-6 flex-wrap">
-                  {/* Wrong Answer */}
-                  <div className="flex items-center gap-3">
-                    <span style={{ fontSize: '13px', color: '#666666', fontFamily: 'Inter, sans-serif', minWidth: '80px' }}>Wrong Answer</span>
-                    <div className="flex items-center" style={{ border: '1px solid #E0E0E0', borderRadius: '4px', overflow: 'hidden' }}>
-                      <button
-                        type="button"
-                        onClick={() => adjustMark('wrong_marks', -1)}
-                        style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                      <span style={{ padding: '6px 14px', fontSize: '14px', fontWeight: 500, color: '#333333', minWidth: '36px', textAlign: 'center' as const, backgroundColor: '#FFFFFF', fontFamily: 'Inter, sans-serif' }}>
-                        {watchedWrongMarks}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => adjustMark('wrong_marks', 1)}
-                        style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
+                <div style={{ border: '2px solid #7C3AED', borderRadius: '8px', padding: '20px', backgroundColor: '#FEFEFE' }}>
+                  {/* Row 1: Wrong Answer, Unattempt, Correct Answer */}
+                  <div className="flex items-center gap-6 flex-wrap mb-5">
+                    {/* Wrong Answer */}
+                    <div className="flex items-center gap-3">
+                      <span style={{ fontSize: '13px', color: '#666666', fontFamily: 'Inter, sans-serif', minWidth: '90px' }}>Wrong Answer</span>
+                      <div className="flex items-center" style={{ border: '1px solid #E0E0E0', borderRadius: '4px', overflow: 'hidden' }}>
+                        <button
+                          type="button"
+                          onClick={() => adjustMark('wrong_marks', -1)}
+                          style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        <span style={{ padding: '6px 14px', fontSize: '14px', fontWeight: 500, color: '#333333', minWidth: '36px', textAlign: 'center' as const, backgroundColor: '#FFFFFF', fontFamily: 'Inter, sans-serif' }}>
+                          {watchedWrongMarks}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => adjustMark('wrong_marks', 1)}
+                          style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Unattempted */}
+                    <div className="flex items-center gap-3">
+                      <span style={{ fontSize: '13px', color: '#666666', fontFamily: 'Inter, sans-serif', minWidth: '90px' }}>Unattempt</span>
+                      <div className="flex items-center" style={{ border: '1px solid #E0E0E0', borderRadius: '4px', overflow: 'hidden' }}>
+                        <button
+                          type="button"
+                          onClick={() => adjustMark('unattempt_marks', -1)}
+                          style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        <span style={{ padding: '6px 14px', fontSize: '14px', fontWeight: 500, color: '#333333', minWidth: '36px', textAlign: 'center' as const, backgroundColor: '#FFFFFF', fontFamily: 'Inter, sans-serif' }}>
+                          +{watchedUnattemptMarks}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => adjustMark('unattempt_marks', 1)}
+                          style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Correct Answer */}
+                    <div className="flex items-center gap-3">
+                      <span style={{ fontSize: '13px', color: '#666666', fontFamily: 'Inter, sans-serif', minWidth: '90px' }}>Correct Answer</span>
+                      <div className="flex items-center" style={{ border: '1px solid #E0E0E0', borderRadius: '4px', overflow: 'hidden' }}>
+                        <button
+                          type="button"
+                          onClick={() => adjustMark('correct_marks', -1)}
+                          style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        <span style={{ padding: '6px 14px', fontSize: '14px', fontWeight: 500, color: '#333333', minWidth: '36px', textAlign: 'center' as const, backgroundColor: '#FFFFFF', fontFamily: 'Inter, sans-serif' }}>
+                          +{watchedCorrectMarks}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => adjustMark('correct_marks', 1)}
+                          style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Unattempted */}
-                  <div className="flex items-center gap-3">
-                    <span style={{ fontSize: '13px', color: '#666666', fontFamily: 'Inter, sans-serif', minWidth: '80px' }}>Unattempted</span>
-                    <div className="flex items-center" style={{ border: '1px solid #E0E0E0', borderRadius: '4px', overflow: 'hidden' }}>
-                      <button
-                        type="button"
-                        onClick={() => adjustMark('unattempt_marks', -1)}
-                        style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                      <span style={{ padding: '6px 14px', fontSize: '14px', fontWeight: 500, color: '#333333', minWidth: '36px', textAlign: 'center' as const, backgroundColor: '#FFFFFF', fontFamily: 'Inter, sans-serif' }}>
-                        +{watchedUnattemptMarks}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => adjustMark('unattempt_marks', 1)}
-                        style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
+                  {/* Row 2: No of Questions and Total Marks */}
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* No of Questions */}
+                    <div>
+                      <label style={labelStyle}>
+                        No of Questions <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        {...register('total_questions', { valueAsNumber: true })}
+                        placeholder="Ex:250 Marks"
+                        style={inputStyle()}
+                        onFocus={(e) => { e.target.style.borderColor = '#5B7CFF'; }}
+                        onBlur={(e) => { e.target.style.borderColor = '#E0E0E0'; }}
+                      />
                     </div>
-                  </div>
 
-                  {/* Correct Answer */}
-                  <div className="flex items-center gap-3">
-                    <span style={{ fontSize: '13px', color: '#666666', fontFamily: 'Inter, sans-serif', minWidth: '80px' }}>Correct Answer</span>
-                    <div className="flex items-center" style={{ border: '1px solid #E0E0E0', borderRadius: '4px', overflow: 'hidden' }}>
-                      <button
-                        type="button"
-                        onClick={() => adjustMark('correct_marks', -1)}
-                        style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                      <span style={{ padding: '6px 14px', fontSize: '14px', fontWeight: 500, color: '#333333', minWidth: '36px', textAlign: 'center' as const, backgroundColor: '#FFFFFF', fontFamily: 'Inter, sans-serif' }}>
-                        +{watchedCorrectMarks}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => adjustMark('correct_marks', 1)}
-                        style={{ padding: '6px 10px', backgroundColor: '#F5F5F5', border: 'none', cursor: 'pointer', color: '#333333' }}
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
+                    {/* Total Marks */}
+                    <div>
+                      <label style={labelStyle}>
+                        Total Marks <span style={{ color: '#EF4444' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        {...register('total_marks', { valueAsNumber: true })}
+                        placeholder="Ex:250 Marks"
+                        style={inputStyle()}
+                        onFocus={(e) => { e.target.style.borderColor = '#5B7CFF'; }}
+                        onBlur={(e) => { e.target.style.borderColor = '#E0E0E0'; }}
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* No of Questions */}
-              <div>
-                <label style={labelStyle}>
-                  No of Questions <span style={{ color: '#EF4444' }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  {...register('total_questions', { valueAsNumber: true })}
-                  placeholder="Ex: 50"
-                  style={inputStyle()}
-                  onFocus={(e) => { e.target.style.borderColor = '#5B7CFF'; }}
-                  onBlur={(e) => { e.target.style.borderColor = '#E0E0E0'; }}
-                />
-              </div>
-
-              {/* Total Marks */}
-              <div>
-                <label style={labelStyle}>
-                  Total Marks <span style={{ color: '#EF4444' }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  {...register('total_marks', { valueAsNumber: true })}
-                  placeholder="Ex: 250"
-                  style={inputStyle()}
-                  onFocus={(e) => { e.target.style.borderColor = '#5B7CFF'; }}
-                  onBlur={(e) => { e.target.style.borderColor = '#E0E0E0'; }}
-                />
               </div>
             </div>
 

@@ -1,7 +1,9 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Preproute Design System */
-@theme {
+:root {
   --color-primary: #4F46E5;
   --color-primary-light: #6366F1;
   --color-primary-dark: #3730A3;

@@ -29,6 +29,7 @@ export default function AddQuestions() {
     difficulty: '',
     topic: '',
     sub_topic: '',
+    media_url: '',
   });
 
   useEffect(() => {
@@ -103,9 +104,10 @@ export default function AddQuestions() {
       subject: subjectId,
       topic: form.topic ? (topics.find((t) => t.id === form.topic)?.name || form.topic) : undefined,
       sub_topic: form.sub_topic ? (subTopics.find((st) => st.id === form.sub_topic)?.name || form.sub_topic) : undefined,
+      media_url: form.media_url || undefined,
     };
     setQuestions((prev) => [...prev, newQ]);
-    setForm({ question: '', option1: '', option2: '', option3: '', option4: '', correct_option: 'option1', explanation: '', difficulty: '', topic: '', sub_topic: '' });
+    setForm({ question: '', option1: '', option2: '', option3: '', option4: '', correct_option: 'option1', explanation: '', difficulty: '', topic: '', sub_topic: '', media_url: '' });
     toast.success('Question added');
   };
 
@@ -132,6 +134,7 @@ export default function AddQuestions() {
           subject: subjectId,
           topic: form.topic ? (topics.find((t) => t.id === form.topic)?.name || form.topic) : undefined,
           sub_topic: form.sub_topic ? (subTopics.find((st) => st.id === form.sub_topic)?.name || form.sub_topic) : undefined,
+          media_url: form.media_url || undefined,
         };
         allQuestions = [...allQuestions, newQ];
       }
@@ -360,7 +363,7 @@ export default function AddQuestions() {
             </div>
 
             {/* Question Settings - 3 Dropdowns */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 400, color: '#666666', marginBottom: '6px', fontFamily: 'Inter, sans-serif' }}>
                   Level of Difficulty
@@ -439,6 +442,34 @@ export default function AddQuestions() {
                   {subTopics.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* Media URL (Optional) */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 400, color: '#666666', marginBottom: '6px', fontFamily: 'Inter, sans-serif' }}>
+                Media URL (Optional)
+              </label>
+              <input
+                type="url"
+                value={form.media_url}
+                onChange={(e) => setForm({ ...form, media_url: e.target.value })}
+                placeholder="https://example.com/image.png"
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  padding: '0 12px',
+                  border: '1px solid #E0E0E0',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  color: '#333333',
+                  fontFamily: 'Inter, sans-serif',
+                  outline: 'none',
+                  backgroundColor: '#FFFFFF',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) => { e.target.style.borderColor = '#5B7CFF'; }}
+                onBlur={(e) => { e.target.style.borderColor = '#E0E0E0'; }}
+              />
             </div>
 
             {/* Action Buttons */}
