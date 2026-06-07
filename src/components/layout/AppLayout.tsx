@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { useAuthStore } from '../../store';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, BookOpen, LogOut, ChevronDown, Bell } from 'lucide-react';
+import preprouteLogo from '/public/preproute-logo.png';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -35,7 +36,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Logo */}
         <div className="px-5 py-4 flex items-center gap-2.5 border-b border-[#E5E7EB]">
           <img
-            src="/preproute-logo.png"
+            src={preprouteLogo}
             alt="Preproute"
             className="w-6 h-6"
             draggable={false}

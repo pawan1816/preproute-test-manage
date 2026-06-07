@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
+import loginIllustration from '/public/login-illustration.png';
+import preprouteLogo from '/public/preproute-logo.png';
 
 export default function Login() {
   const { login, isLoading, error, isAuthenticated, clearError } = useAuthStore();
@@ -41,7 +43,7 @@ export default function Login() {
 
         {/* Main Illustration */}
         <img
-          src="/login-illustration.png"
+          src={loginIllustration}
           alt="Preproute Illustration"
           className="w-[420px] h-[420px] object-contain"
           draggable={false}
@@ -57,7 +59,7 @@ export default function Login() {
           {/* Logo with Text */}
           <div className="flex items-center justify-center gap-2">
             <img
-              src="/preproute-logo.png"
+              src={preprouteLogo}
               alt="PrepRoute"
               style={{ width: '32px', height: 'auto' }}
               draggable={false}
