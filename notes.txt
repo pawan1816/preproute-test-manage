@@ -1,0 +1,220 @@
+# Technical Decisions - PrepRoute Test Management
+
+## Architecture Overview
+Single Page Application (SPA) built with React + TypeScript, deployed on Vercel with API proxy to Railway backend.
+
+## Core Technology Stack
+
+### Frontend Framework
+- **React 18.2.0** - Modern component-based UI library with hooks
+- **TypeScript** - Type safety and better developer experience
+- **Vite 5.1.4** - Fast build tool with HMR (Hot Module Replacement)
+  - Chosen over Create React App for faster builds and better dev experience
+  - Built-in TypeScript support without additional configuration
+
+### State Management
+- **Zustand 4.5.1** - Lightweight state management
+  - Chosen over Redux for simplicity and less boilerplate
+  - Used for auth state and test management
+  - Supports middleware and persistence out of the box
+
+### Routing
+- **React Router DOM 6.22.2** - Client-side routing
+  - v6 for improved TypeScript support and nested routes
+  - BrowserRouter for clean URLs (no hash routing)
+  - Protected routes pattern for authentication
+
+### Styling
+- **Tailwind CSS 3.4.1** - Utility-first CSS framework
+  - Rapid development with utility classes
+  - Built-in responsive design
+  - Tree-shaking for smaller production bundles
+  - Custom design system integration
+
+### Form Management
+- **React Hook Form 7.50.1** - Performant form handling
+  - Minimal re-renders compared to controlled components
+  - Built-in validation support
+- **Zod 3.22.4** - Schema validation
+  - Type-safe validation schemas
+  - Integration with React Hook Form via @hookform/resolvers
+
+### HTTP Client
+- **Axios 1.6.7** - Promise-based HTTP client
+  - Interceptors for auth token injection
+  - Automatic JSON transformation
+  - Better error handling than fetch
+  - Request/response interceptors for global auth logic
+
+### UI Components
+- **Lucide React 0.344.0** - Icon library
+  - Tree-shakeable icons
+  - Consistent design system
+- **React Hot Toast 2.4.1** - Toast notifications
+  - Simple API with good UX
+  - Customizable styling
+
+### Testing
+- **Vitest 1.3.1** - Vite-native testing framework
+  - Fast execution with Vite's transform pipeline
+  - Jest-compatible API
+- **Testing Library** - Component testing
+  - @testing-library/react for React components
+  - @testing-library/user-event for user interactions
+- **jsdom 24.0.0** - DOM simulation for tests
+
+## Deployment Architecture
+
+### Initial Approach: GitHub Pages (Abandoned)
+**Problem**: GitHub Pages only serves static files, cannot proxy API requests
+- CORS errors when calling Railway backend from different origin
+- 405 Method Not Allowed for API calls
+- No server-side functionality
+
+### Final Solution: Vercel (Current)
+**Why Vercel?**
+- Free tier with generous limits
+- Built-in API proxy via rewrites
+- Automatic HTTPS and CDN
+- Git integration for CI/CD
+- Supports SPA routing out of the box
+
+**Configuration**:
+```json
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://admin-moderator-backend-staging.up.railway.app/api/:path*"
+    }
+  ]
+}
+```
+
+This rewrites all `/api/*` requests to the Railway backend, solving CORS issues.
+
+### Environment Configuration
+- **Development (.env)**: `VITE_API_BASE_URL=/api` - Uses Vite dev server proxy
+- **Production (.env.production)**: `VITE_API_BASE_URL=/api` - Uses Vercel rewrites
+
+## Key Implementation Patterns
+
+### Authentication Flow
+1. JWT token stored in localStorage
+2. Axios request interceptor automatically adds token to headers
+3. Axios response interceptor handles 401 errors (auto-logout)
+4. Protected routes check authentication status via Zustand store
+
+### API Layer Structure
+```
+/src/api
+  ├── axios.ts       - Axios instance with interceptors
+  ├── endpoints.ts   - API endpoint functions
+  └── index.ts       - Public API exports
+```
+
+### State Management Pattern
+- Centralized stores (authStore, testStore)
+- Zustand's create() hook pattern
+- Async actions within store
+- Local storage persistence for auth
+
+### Component Architecture
+- Pages in `/src/pages`
+- Reusable components in `/src/components`
+- Layout components for shared structure (ProtectedRoute)
+- Inline styles for design-specific components (matching Figma specs)
+
+## Build & Deployment
+
+### Build Configuration
+- Vite base path: `/` (root, not subdirectory)
+- Node.js 20.x for Vercel compatibility
+- TypeScript strict mode enabled
+- Build output: `/dist` directory
+
+### CI/CD Pipeline
+- Push to `main` branch → Automatic Vercel deployment
+- Build command: `tsc && vite build`
+- No pre-build steps required
+- Vercel handles build caching
+
+## SPA Routing Solution
+
+### GitHub Pages 404 Redirect (Legacy)
+- 404.html script redirects to index.html with path in query string
+- index.html script reads query string and uses History API
+- **Note**: This approach kept for reference but not used in Vercel
+
+### Vercel SPA Routing
+- Built-in SPA support via rewrites
+- All non-API routes serve index.html
+- React Router handles client-side routing
+
+## Proxy Strategy
+
+### Development (Vite)
+```typescript
+proxy: {
+  '/api': {
+    target: 'https://admin-moderator-backend-staging.up.railway.app',
+    changeOrigin: true,
+    secure: true
+  }
+}
+```
+
+### Production (Vercel Rewrites)
+- Direct URL rewriting to Railway backend
+- Preserves request method, headers, and body
+- No CORS issues (same-origin from browser perspective)
+
+## Critical Fixes Applied
+
+### Issue 1: 404 on Page Refresh (GitHub Pages)
+**Root Cause**: GitHub Pages doesn't support SPA routing
+**Solution**: Migrated to Vercel with proper rewrites
+
+### Issue 2: CORS Errors
+**Root Cause**: Direct API calls from GitHub Pages origin to Railway backend
+**Solution**: Vercel rewrites proxy API requests server-side
+
+### Issue 3: Blank Page on Vercel
+**Root Cause**: Vite base path set to `/preproute-test-manage/` (GitHub Pages path)
+**Solution**: Changed base to `/` in vite.config.ts
+
+### Issue 4: 405 Method Not Allowed
+**Root Cause**: Incorrect Vercel rewrites syntax `/api/(.*)`
+**Solution**: Changed to `/api/:path*` (correct Vercel syntax)
+
+## Performance Optimizations
+- Vite's code splitting and tree-shaking
+- Lazy loading for route components (can be implemented)
+- Axios interceptors prevent duplicate auth logic
+- Zustand's selector-based re-rendering
+
+## Security Considerations
+- JWT tokens in localStorage (XSS risk accepted for simplicity)
+- HTTPS enforced by Vercel
+- CORS handled via proxy (no credentials exposed)
+- No sensitive data in client-side code
+- Auth token automatically removed on 401
+
+## Future Improvements
+1. Implement refresh token mechanism
+2. Add service worker for offline support
+3. Lazy load route components
+4. Add error boundary components
+5. Implement proper logging/monitoring
+6. Add E2E tests with Playwright
+7. Move tokens to httpOnly cookies (more secure than localStorage)
+
+## Lessons Learned
+1. GitHub Pages is unsuitable for SPAs with external APIs
+2. Vercel rewrites are powerful for proxying
+3. Environment-specific configurations are crucial
+4. Base path configuration must match deployment platform
+5. Always test API proxy before considering deployment complete
+
+---
+Last Updated: 2026-06-07
